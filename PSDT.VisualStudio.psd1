@@ -7,8 +7,8 @@
     Copyright = '(c) 2017 Tauri-Code. All rights reserved.'
     Description = 'A collection of Visual Studio related PowerShell developer tools.'
     RequiredModules = @("PSDT.App")
-    FunctionsToExport = @("Import-VSCommandPrompt","Get-VSSolution","Invoke-VSBuild","Invoke-VSTest")
+    FunctionsToExport = @("Import-VSCommandPrompt","Get-VSSolution","Invoke-VSBuild","Invoke-VSTest","Restore-VSSolutionNugetPackages")
     CmdletsToExport = @("*-*")
     VariablesToExport = '*'
-    AliasesToExport = @("gvss","ivsb","ivst")
+    AliasesToExport = @("gvss","ivsb","ivst","rvss")
 }

@@ -251,4 +251,123 @@ Function Invoke-VSTest {
 
 Set-Alias ivst Invoke-VSTest;
 
+<#
+.Synopsis
+    Restores nuget packages of a specific Visual Studio solution, or based on a packages.config file.
+    The cmdlet default alias is: rvss
+
+.DESCRIPTION
+    The cmdlet downloads the latest nuget.exe to the temp folder ($env:TEMP) and uses the restore switch to restore packages.
+    If a solution file was passed to the cmdlet, it will look for packages.config files recursively under the solution's path, and will restore every package found in all config files.
+    If a packages.config is passed, then it will use it for restoring packages.
+
+    The cmdlets accepts either -Solution or -PackagesConfig parameter. If both are defined, the -Solution parameter will be used and -PackagesConfig will be ignored.
+    If both -Solution and -PackagesConfig are missing or do not exist, an error will be displayed.
+
+    The return value of the cmdlet is the -Solution, to support the concept of VS specific cmdlets within this module.
+
+.EXAMPLE
+    Consider the following file system structure:
+
+       Directory: R:\Source\MySolution
+
+    Mode                LastWriteTime         Length Name
+    ----                -------------         ------ ----
+    d-----        6/27/2017   5:57 PM                en-US
+    d-----        6/27/2017   4:12 PM                CSharpProject1
+    d-----        6/27/2017   3:53 PM                CSharpProject2
+    -a----        6/27/2017   5:19 PM            999 MySolution.sln
+   
+    The following cmdlet:
+        PS R:\Source\MySolution> Restore-VSSolutionNugetPackages -Solution MySolution.sln
+
+        - checks whether $env:TEMP\nuget.exe exits. If not, it will download it.
+        - looks for packages.config files under en-US, CSharpProject1 and CSharpProject2 folder, 
+        - and calls nuget retore with the result.
+
+.EXAMPLE
+    Consider the following file system structure:
+
+       Directory: R:\Source\MySolution
+
+    Mode                LastWriteTime         Length Name
+    ----                -------------         ------ ----
+    d-----        6/27/2017   5:57 PM                en-US
+    d-----        6/27/2017   4:12 PM                CSharpProject1
+    d-----        6/27/2017   3:53 PM                CSharpProject2
+    -a----        6/27/2017   5:19 PM            999 MySolution.sln
+   
+    The following cmdlet:
+        PS R:\> Get-VSSolution MySolution | Restore-VSSolutionNugetPackages
+
+        - Get-VSSolution will look for solution files recursively, and will pass them to Restore-VSSolutionPackages
+        Restore-VSSolutionPackages then
+        - checks once, whether $env:TEMP\nuget.exe exits. If not, it will download it,
+        - looks for packages.config files under en-US, CSharpProject1 and CSharpProject2 folder,
+        - and calls nuget retore with the result.
+
+        Note that the Restore-VSSolutionPackages logic, except the first point, is executed for each solution, which is passed to the pipeline.
+
+.EXAMPLE
+    Consider the following file system structure and assume, that CSharpProject1 and CSharpProject2 contains one packages.config file:
+
+       Directory: R:\Source\MySolution
+
+    Mode                LastWriteTime         Length Name
+    ----                -------------         ------ ----
+    d-----        6/27/2017   5:57 PM                en-US
+    d-----        6/27/2017   4:12 PM                CSharpProject1
+    d-----        6/27/2017   3:53 PM                CSharpProject2
+   
+    The following cmdlet:
+        PS R:\Source\MySolution> Get-ChildItem -Filter packages.config -Recursive | Foreach-Object { Restore-VSSolutionNugetPackages -PackagesConfig $_.FullName }
+
+        - looks for every packages.config recursively and passes them to Foreach-Object.
+        - Foreach-Object invokes the Restore-VSSolutionNugetPackages cmdlet for each packages.config one by one.
+        Restore-VSSolutionNugetPackages 
+        - checks on each call, whether $env:TEMP\nuget.exe exits. If not, it will download it,
+        - looks for packages.config files under en-US, CSharpProject1 and CSharpProject2 folder,
+        - and calls nuget retore with the result.
+#>
+function Restore-VSSolutionNugetPackages {
+    [CmdletBinding()]
+    param (
+        # The solution for which nuget packages should be restored.
+        [Parameter(ValueFromPipeline=$true,ValueFromPipelinebyPropertyName=$true)]
+        [Alias("FullName")]
+        [string]$Solution,
+
+        # The packages.config to use for restoring nuget packages.
+        [Parameter(ValueFromPipeline=$True, ValueFromPipelineByPropertyName=$True)]
+        [string]$PackagesConfig
+    )
+
+    begin {
+        $nugetExe = "$($env:TEMP)\nuget.exe";
+        if (-not (Test-Path $nugetExe)) {        
+            Invoke-WebRequest "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe" -OutFile $nugetExe;
+        }
+        Set-Alias nuget $nugetExe -Scope Global -Verbose;
+    }
+
+    process {
+        if ($Solution.Length -eq 0 -and $PackagesConfig.Length -eq 0) {
+            Write-Error "Either -Solution or -PackagesConfig parameter should be passed to the cmdlet.";
+        }
+        else {
+            if (($Solution.Length -gt 0) -and (Test-Path $Solution)) {
+                Get-ChildItem -Filter packages.config -Path (Split-Path $Solution) -Recurse | ForEach-Object { nuget restore $_.FullName -Verbosity Detailed } | Out-Null;
+            } elseif (($PackagesConfig.Length -gt 0) -and (Test-Path $PackagesConfig)) {
+                nuget restore $PackagesConfig -Verbosity Detailed;
+            } else {
+                Write-Error "Either -Solution or -PackagesConfig should be an existing file.";
+            }
+        }
+
+        return $Solution;
+    }
+}
+
+Set-Alias rvss Restore-VSSolutionNugetPackages;
+
 VSCommandPrompt;
