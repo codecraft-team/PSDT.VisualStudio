@@ -8,6 +8,16 @@ Function Import-VSCommandPrompt() {
     # Calls Import-VSCommandPrompt because module will be loaded.
 }
 
+<#
+.Synopsis
+    Imports explicitly the Visual Studio 2017 environment for the current session (MsBuild an Vstest console).
+.DESCRIPTION
+    Check the verbose logging to see, which version of Visual Studio tools was used by the import. 
+#>
+Function Import-VS2017Environment() {
+    VSEnvironment
+}
+
 $env:PSDT_VSCommandPromptVariable = $null;
 
 Function VSCommandPrompt {
@@ -27,9 +37,24 @@ Function VSCommandPrompt {
         }
     }
 
+    $Script:msbuildPath = "MSBuild.exe";
+    $Script:mstestPath = "VSTest.Console.exe";
     Write-Progress -Activity $activity -Completed;
 
     Pop-Location;
+}
+
+function VSEnvironment () {
+    $VSSetupExists = Get-Command Get-VSSetupInstance -ErrorAction SilentlyContinue
+
+    if (-not $VSSetupExists)
+    { Install-Module VSSetup -Scope CurrentUser -Force; }
+
+    $vsPath = (Get-VSSetupInstance | Select-VSSetupInstance -Latest -Require Microsoft.Component.MSBuild).InstallationPath;
+    $Script:msbuildPath = (Get-ChildItem $vsPath -Recurse -Filter "msbuild.exe" | Where-Object {$_.Directory.FullName -like "*64*"}).FullName;
+
+    $vsTestPath = (Get-VSSetupInstance | Select-VSSetupInstance -Latest -Require Microsoft.Component.MSBuild).InstallationPath;
+    $Script:mstestPath = (Get-ChildItem $vsTestPath -Recurse -Filter "vstest.console.exe" | Where-Object {$_.Directory.FullName -like "*TestWindow"}).FullName;
 }
 
 <#
@@ -126,33 +151,33 @@ Function Invoke-VSBuild {
     [CmdletBinding()]
     Param(
         # The solution to be build.
-        [Parameter(Mandatory=$true,ValueFromPipeline=$true,ValueFromPipelinebyPropertyName=$true)]
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelinebyPropertyName = $true)]
         [Alias("FullName")]
         [string]$Solution,
 
         # The msbuild configuration. Default is "Debug".
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [string]$Configuration = "Debug",
 
         # The msbuild target to be build. Default is "Build".
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [string[]]$Target = "Build",
 
         # The msbuild verbosity. Default is minimal.
-        [Parameter(Mandatory=$false)]
-        [ValidateSet('quiet','minimal','normal','detailed','diagnostics')]
+        [Parameter(Mandatory = $false)]
+        [ValidateSet('quiet', 'minimal', 'normal', 'detailed', 'diagnostics')]
         [string]$Verbosity = "minimal",
 
         # Additional msbuild properties like "/p:Platform=x86". The string can contain multiple properties. Use a semicolon or a comma to separate multiple properties.
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [string]$Properties,
 
         # Specifies how many cpu to use for executing msbuild. Default is 4.
-        [Parameter(Mandatory=$false)]
-        [string]$MaxCpuCount=4,
+        [Parameter(Mandatory = $false)]
+        [string]$MaxCpuCount = 4,
 
         # Specifiy the build output directory.
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [string]$OutDir
     )
     
@@ -163,13 +188,13 @@ Function Invoke-VSBuild {
 
         $targets = $Target -join ";";
         
-        $msbuild = "MSBuild.exe";
+        $msbuild = $msbuildPath;
         
         $cmdlineArguments = @("$($SolutionFileInfo.FullName)", "/v:$Verbosity", "/p:Configuration=$Configuration", "/t:$targets", "/m:$MaxCpuCount");
     
-        If ($Properties){$cmdlineArguments += "$Properties"}
+        If ($Properties) {$cmdlineArguments += "$Properties"}
       
-        If ($OutDir){$cmdlineArguments += "/p:OutDir=$OutDir"}
+        If ($OutDir) {$cmdlineArguments += "/p:OutDir=$OutDir"}
         
         Write-Verbose("Commandline: $msbuild $cmdlineArguments");
     
@@ -205,20 +230,20 @@ Function Invoke-VSTest {
     Param(
         # Pattern to match test files.
         # Default is set to "*tests.dll".
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [string]$FileMatch = "*tests.dll",
 
         # Pattern to match test file path.
         # Default is set to ".*\\bin\\debug\\".
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [string]$PathMatch = ".*\\bin\\debug\\",
 
         # Filter for tests. Default is set to "TestCategory!=Integrated&TestCategory!=Integration&TestCategory!=Evaluation".
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [string]$TestCaseFilter = "TestCategory!=Integrated&TestCategory!=Integration&TestCategory!=Evaluation",
 
         # Path to a runsettings file.
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [string]$Settings,
 
         # Switch to specifiy whether the tests should be excuted in parallel.
@@ -232,13 +257,13 @@ Function Invoke-VSTest {
     
     Write-Host "$($testAssemblies.Length) test files found.";
 
-    $mstest = "VSTest.Console.exe";
+    $mstest = $mstestPath;
 
     $cmdlineArguments = @($testAssemblies.FullName) + @("/TestCaseFilter:`"$TestCaseFilter`"");
    
-    If ($Parallel){$cmdlineArguments += "/Parallel"}
+    If ($Parallel) {$cmdlineArguments += "/Parallel"}
 
-    If ($Settings){$cmdlineArguments += "/Settings:$Settings"}
+    If ($Settings) {$cmdlineArguments += "/Settings:$Settings"}
     
     Write-Verbose("Commandline: $mstest $cmdlineArguments");
     
