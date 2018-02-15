@@ -11,7 +11,7 @@ Function Import-VSCommandPrompt() {
 $env:PSDT_VSCommandPromptVariable = $null;
 
 Function VSCommandPrompt {
-    $vsDevCmd = Get-ChildItem VsDevCmd.bat -Path "C:\*\Microsoft Visual Studio*\Common7\Tools" -Recurse | Select-Object -Last 1;
+    $vsDevCmd = Get-ChildItem VsDevCmd.bat -Path "C:\*\Microsoft Visual Studio*\Common7\Tools", "C:\*\Microsoft Visual Studio\*\*\Common7\Tools" -Recurse | Select-Object -Last 1;
     $env:PSDT_VSCommandPromptVariable = $($vsDevCmd.FullName);
 
     Push-Location $vsDevCmd.DirectoryName;
