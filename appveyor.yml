@@ -19,6 +19,7 @@
       Set-PSRepository -Name PSGallery -InstallationPolicy Trusted;
       Install-Module -Name PSScriptAnalyzer;
       Install-Module -Name PSDT.AppVeyor;
+      Install-Module -Name PSDT.App;
   build_script:
   - ps: >-
       Invoke-PSDTPreBuild;
@@ -59,6 +60,7 @@
       Set-PSRepository -Name PSGallery -InstallationPolicy Trusted;
       Install-Module -Name PSScriptAnalyzer;
       Install-Module -Name PSDT.AppVeyor;
+      Install-Module -Name PSDT.App;      
   build_script:
   - ps: >-
       Invoke-PSDTPreBuild;
