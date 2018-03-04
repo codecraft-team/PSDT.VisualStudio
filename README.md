@@ -1,6 +1,6 @@
 # PSDT.VisualStudio
 
-[![Build status](https://ci.appveyor.com/api/projects/status/i6v5wbu2hyo5a7wu/branch/master?svg=true&passingText=Build%20Passing&failingText=Build%20Failing&pendingText=Build%20Pending)](https://ci.appveyor.com/project/TauriCode/PSDT-VisualStudio)
+[![Build status](https://ci.appveyor.com/api/projects/status/94c7i1r3ivtkiwak/branch/master?svg=true&passingText=Build%20Passing&failingText=Build%20Failing&pendingText=Build%20Pending)](https://ci.appveyor.com/project/codecraftteam/PSDT-VisualStudio)
 
 A collection of PowerShell scripts and modules, which increase .NET developers every day productivity.
 
